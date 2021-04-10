@@ -165,7 +165,11 @@ function App() {
             }}
           />
         </div>
-        <span>{invalid ? invalidReason : summary}</span>
+        {invalid ? (
+          <span>❌ {invalidReason} ❌</span>
+        ) : (
+          <span>✅ {summary} ✅</span>
+        )}
         <button disabled={invalid} onClick={scheduleSailors}>
           Schedule!
         </button>
