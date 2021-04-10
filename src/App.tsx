@@ -153,8 +153,10 @@ function App() {
             id="start"
             name="trip-start"
             value={`${startDate.toISOString().split("T")[0]}`}
-            // min="2018-01-01"
-            // max="2018-12-31"
+            onChange={(event) => {
+              console.log(event.target.value);
+              setStartDate(new Date(event.target.value));
+            }}
           />
         </div>
         <span>{invalid ? invalidReason : summary}</span>
