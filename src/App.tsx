@@ -121,60 +121,58 @@ function App() {
 
   return (
     <div className="App">
-      <header className="App-header">
-        <div>⚓️ Sailor Scheduler 🛥</div>
-        <br />
-        <span>Sailors:</span>
-        {sailors.map((sailor, i) => (
-          <SailorInput
-            key={i}
-            index={i}
-            onTextChange={updateSailorName}
-            onReturn={addSailor}
-            value={sailor}
-            onDelete={removeSailor}
-          />
-        ))}
-        <button onClick={addSailor}>Add Sailor</button>
-        <div>
-          <span>Days at Sea:</span>
-          <input
-            type="number"
-            // className="promptInput"
-            placeholder="Days At Sea"
-            onChange={(event) => setDaysAtSea(Number(event.target.value))}
-            value={daysAtSea}
-          />
-        </div>
-        <div>
-          <span>Fist day:</span>
-          <input
-            type="date"
-            id="start"
-            name="trip-start"
-            value={`${startDate.toISOString().split("T")[0]}`}
-            onChange={(event) => {
-              console.log(event.target.value);
-              setStartDate(
-                new Date(
-                  event.target.value +
-                    "T" +
-                    new Date().toISOString().split("T")[1] // add the time 🙄
-                )
-              );
-            }}
-          />
-        </div>
-        {invalid ? (
-          <span>❌ {invalidReason} ❌</span>
-        ) : (
-          <span>✅ {summary} ✅</span>
-        )}
-        <button disabled={invalid} onClick={scheduleSailors}>
-          Schedule!
-        </button>
-        <ScheduleView assignments={assignments} />
-      </header>
+      <div>⚓️ Sailor Scheduler 🛥</div>
+      <br />
+      <span>Sailors:</span>
+      {sailors.map((sailor, i) => (
+        <SailorInput
+          key={i}
+          index={i}
+          onTextChange={updateSailorName}
+          onReturn={addSailor}
+          value={sailor}
+          onDelete={removeSailor}
+        />
+      ))}
+      <button onClick={addSailor}>Add Sailor</button>
+      <div>
+        <span>Days at Sea:</span>
+        <input
+          type="number"
+          // className="promptInput"
+          placeholder="Days At Sea"
+          onChange={(event) => setDaysAtSea(Number(event.target.value))}
+          value={daysAtSea}
+        />
+      </div>
+      <div>
+        <span>Fist day:</span>
+        <input
+          type="date"
+          id="start"
+          name="trip-start"
+          value={`${startDate.toISOString().split("T")[0]}`}
+          onChange={(event) => {
+            console.log(event.target.value);
+            setStartDate(
+              new Date(
+                event.target.value +
+                  "T" +
+                  new Date().toISOString().split("T")[1] // add the time 🙄
+              )
+            );
+          }}
+        />
+      </div>
+      {invalid ? (
+        <span>❌ {invalidReason} ❌</span>
+      ) : (
+        <span>✅ {summary} ✅</span>
+      )}
+      <button disabled={invalid} onClick={scheduleSailors}>
+        Schedule!
+      </button>
+      <ScheduleView assignments={assignments} />
     </div>
   );
 }
