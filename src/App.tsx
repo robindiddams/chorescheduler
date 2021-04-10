@@ -155,7 +155,13 @@ function App() {
             value={`${startDate.toISOString().split("T")[0]}`}
             onChange={(event) => {
               console.log(event.target.value);
-              setStartDate(new Date(event.target.value));
+              setStartDate(
+                new Date(
+                  event.target.value +
+                    "T" +
+                    new Date().toISOString().split("T")[1] // add the time 🙄
+                )
+              );
             }}
           />
         </div>
