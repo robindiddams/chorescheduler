@@ -10,109 +10,22 @@ interface mealChore {
   type: Meal;
 }
 
-export class Sailor {
-  name: string;
-  capitan: boolean = false;
-  breakfast: number = 0;
-  dinner: number = 0;
-  lunch: number = 0;
-  happyhour: number = 0;
-  chores: mealChore[] = [];
-
-  constructor(name?: string) {
-    this.name = name ?? "";
-  }
-
-  setCapitan(to: boolean) {
-    this.capitan = to;
-  }
-
-  // willTakeChore ensures that a sailor has no more than 1 chore a day, and that they dont do the same chore twice in a row.
-  willTakeChore(chore: mealChore): boolean {
-    let didThisChoreYesterday: boolean = false;
-    // check if i did the chore yesterday
-    if (chore.day !== 0) {
-      // dont check yesterday on the first day
-      const yesterday = chore.day - 1;
-      didThisChoreYesterday = !!this.chores.find(
-        (pastChore) =>
-          pastChore.type === chore.type && pastChore.day === yesterday
-      );
-      if (didThisChoreYesterday) {
-        console.debug(
-          `${this.name} did ${chore.type} yesterday (day: ${yesterday})`
-        );
-      }
-    }
-    const didAnyChoresToday = !!this.chores.find(
-      (pastChore) => pastChore.day === chore.day
-    );
-    return !didThisChoreYesterday && !didAnyChoresToday;
-  }
-
-  takeChore(chore: mealChore) {
-    switch (chore.type) {
-      case Meal.BREAKFAST:
-        this.breakfast++;
-        break;
-      case Meal.LUNCH:
-        this.lunch++;
-        break;
-      case Meal.HAPPYHOUR:
-        this.happyhour++;
-        break;
-      case Meal.DINNER:
-        this.dinner++;
-        break;
-    }
-    this.chores.push(chore);
-  }
-}
-
 interface shipDay {
   date: Date;
   day: number;
+  isLastDay: boolean;
 }
 
 const createDates = (days: number, start: Date): shipDay[] => {
-  let list: number[] = [];
+  let list: shipDay[] = [];
   for (let i = 0; i < days; i++) {
-    list.push(i);
-  }
-  let daylist = list.map((delta) => {
     let d = new Date(start);
-    d.setDate(start.getDate() + delta);
-    return { date: d, day: delta };
-  });
-  console.log("days", daylist);
-  return daylist;
-};
+    d.setDate(start.getDate() + i);
 
-const assignChore = (
-  sailors: Sailor[],
-  index: number,
-  chore: mealChore
-): number => {
-  const incr = () => {
-    if (index < sailors.length - 1) {
-      index++;
-    } else {
-      index = 0;
-    }
-  };
-  for (let i = 0; i < sailors.length; i++) {
-    if (sailors[index].willTakeChore(chore)) {
-      console.debug(
-        `${sailors[index].name} will take ${chore.type} for day ${chore.day}`
-      );
-      sailors[index].takeChore(chore);
-      incr();
-      return index;
-    }
-    incr();
+    list.push({ date: d, day: i, isLastDay: i === days - 1 });
   }
-  console.debug("no eligable sailor!", chore);
-  throw new Error("no eligable sailor!" + chore);
+  console.log("days", list);
+  return list;
 };
 
 const getDailyChores = (day: number): mealChore[] => {
@@ -183,29 +96,103 @@ export const assignAllChores = (
   startDate: Date,
   sailors: string[]
 ): Assignment[] => {
-  const _sailors = sailors.map((s) => new Sailor(s));
   const dates = createDates(dayCount, startDate);
-  let sailorIndex = 0; // keep track of where we are as we read through the sailors
-  const chores = dates
-    .map((shipDay) =>
-      getDailyChores(shipDay.day).map(
-        (chore): Assignment => {
-          let workers: string[] = [];
-          sailorIndex = assignChore(_sailors, sailorIndex, chore);
-          workers.push(_sailors[sailorIndex].name);
-          if (chore.type !== Meal.HAPPYHOUR) {
-            sailorIndex = assignChore(_sailors, sailorIndex, chore);
-            workers.push(_sailors[sailorIndex].name);
-          }
-          return {
-            day: shipDay.day,
-            date: shipDay.date,
-            type: chore.type,
-            workers,
-          };
-        }
-      )
-    )
-    .reduce((acc, choreDay) => acc.concat(choreDay), [] as Assignment[]);
+
+  const chores: Assignment[] = [];
+  const getAssignedSailorForChore = (
+    sortedSailors: string[],
+    currentDay: number,
+    choreType: Meal,
+    coWorker?: string
+  ) => {
+    const assignee = sortedSailors.find((sailor) => {
+      if (sailor === coWorker) {
+        return false;
+      }
+      const didAnyChoresToday = chores.some(
+        (chore) => chore.day === currentDay && chore.workers.includes(sailor)
+      );
+      const didThisChoreYesterday =
+        currentDay === 0
+          ? false
+          : chores.some(
+              (chore) =>
+                chore.day === currentDay - 1 &&
+                chore.workers.includes(sailor) &&
+                chore.type === choreType
+            );
+      return !didThisChoreYesterday && !didAnyChoresToday;
+    });
+    if (!assignee) {
+      console.debug("no eligable sailor!", choreType);
+      throw new Error("no eligable sailor!" + choreType);
+    }
+    return assignee;
+  };
+
+  const assigned = new Set<string>();
+  const workCounts = new Map<string, number>();
+  const incrChoreCount = (sailor: string, chore: Meal) =>
+    workCounts.set(
+      `${sailor}:${chore}`,
+      (workCounts.get(`${sailor}:${chore}`) ?? 0) + 1
+    );
+
+  const sortSailorsByChore = (sailors: string[], chore: Meal) =>
+    [...sailors].sort((a, b) => {
+      const aTimes = workCounts.get(`${a}:${chore}`) ?? 0;
+      const bTimes = workCounts.get(`${b}:${chore}`) ?? 0;
+      return aTimes - bTimes;
+    });
+
+  let firstRound = true;
+  for (let i = 0; i < dates.length; i++) {
+    const sday = dates[i];
+    const currentDay = sday.day;
+
+    const meals = getDailyChores(currentDay);
+    for (let j = 0; j < meals.length; j++) {
+      const choreType = meals[j].type;
+
+      const sortedSailors = firstRound
+        ? sailors
+        : sortSailorsByChore(sailors, choreType);
+
+      const firstWorker = getAssignedSailorForChore(
+        sortedSailors,
+        currentDay,
+        choreType
+      );
+
+      const workers =
+        choreType !== Meal.HAPPYHOUR
+          ? [
+              firstWorker,
+              getAssignedSailorForChore(
+                sortedSailors,
+                currentDay,
+                choreType,
+                firstWorker
+              ),
+            ]
+          : [firstWorker];
+
+      chores.push({
+        workers,
+        date: sday.date,
+        day: sday.day,
+        type: choreType,
+      });
+      workers.forEach((w) => {
+        incrChoreCount(w, choreType);
+        assigned.add(w);
+      });
+      if (firstRound && assigned.size >= sailors.length) {
+        firstRound = false;
+      } else if (firstRound) {
+        sailors.push(sailors.shift() as string);
+      }
+    }
+  }
   return chores;
 };
