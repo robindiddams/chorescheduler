@@ -91,12 +91,23 @@ export const makeChoreChart = (assignments: Assignment[]) => {
   return csv;
 };
 
+const isSacks = (name: string) => {
+  const lower = name.toLowerCase();
+  return (
+    lower === "max" ||
+    lower === "maxwell" ||
+    lower === "sacks" ||
+    lower === "sax"
+  );
+};
+
 export const assignAllChores = (
   dayCount: number,
   startDate: Date,
-  sailors: string[]
+  _sailors: string[]
 ): Assignment[] => {
   const dates = createDates(dayCount, startDate);
+  const sailors = [..._sailors];
 
   const chores: Assignment[] = [];
   const getAssignedSailorForChore = (
@@ -135,7 +146,7 @@ export const assignAllChores = (
   const incrChoreCount = (sailor: string, chore: Meal) =>
     workCounts.set(
       `${sailor}:${chore}`,
-      (workCounts.get(`${sailor}:${chore}`) ?? 0) + 1
+      (workCounts.get(`${sailor}:${chore}`) ?? 0) + (isSacks(sailor) ? 1.5 : 1)
     );
 
   const sortSailorsByChore = (sailors: string[], chore: Meal) =>
